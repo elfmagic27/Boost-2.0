@@ -1,6 +1,6 @@
 {
     "customisation": {
-        "enable": true,
+        "enable": false,
         "use_custom_pfp": true,
         "use_custom_banner": true,
         "nick": "~ .gg/elfmart",
