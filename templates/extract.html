@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token Extractor</title>
+<style>
+  :root {
+    --bg: #0e0e12;
+    --surface: #16161e;
+    --card: #1e1e2e;
+    --border: #2a2a3e;
+    --accent: #7c3aed;
+    --accent2: #a855f7;
+    --green: #22c55e;
+    --red: #ef4444;
+    --yellow: #eab308;
+    --text: #e2e2f0;
+    --muted: #6b6b8a;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 64px;
+  }
+  .logo {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  header h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+  header nav { margin-left: auto; display: flex; gap: 8px; }
+  header nav a {
+    color: var(--muted); font-size: 13px; text-decoration: none;
+    padding: 6px 14px; border-radius: 8px; border: 1px solid transparent;
+    transition: all .2s;
+  }
+  header nav a:hover { color: var(--text); border-color: var(--border); }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 32px 20px; }
+
+  h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+  .card-title {
+    font-size: 14px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title span { font-size: 16px; }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+
+  input[type="text"], textarea, select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color .2s;
+    resize: vertical;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+  textarea { font-family: 'Courier New', monospace; font-size: 12px; }
+
+  .format-hint {
+    background: rgba(124,58,237,.08);
+    border: 1px solid rgba(124,58,237,.2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    line-height: 1.6;
+  }
+  .format-hint strong { color: var(--accent2); }
+
+  .sep-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 16px; }
+  .sep-row > div { flex: 1; }
+  .sep-row > div:last-child { flex: 0 0 auto; }
+
+  .columns-wrap {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 16px; min-height: 40px;
+  }
+  .col-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px; cursor: pointer;
+    transition: all .2s;
+    user-select: none;
+  }
+  .col-tag.selected {
+    background: rgba(124,58,237,.18);
+    border-color: var(--accent);
+    color: var(--accent2);
+  }
+  .col-tag .idx {
+    background: var(--border);
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; flex-shrink: 0;
+  }
+  .col-tag.selected .idx { background: var(--accent); color: #fff; }
+
+  .col-order {
+    font-size: 11px; color: var(--muted); margin-bottom: 8px;
+  }
+  .selected-order {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px;
+    min-height: 28px;
+  }
+  .order-chip {
+    background: rgba(124,58,237,.25);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 3px 10px;
+    font-size: 12px; color: var(--accent2);
+    display: flex; align-items: center; gap: 6px;
+    cursor: grab;
+  }
+  .order-chip .rm { cursor: pointer; opacity: .6; font-size: 14px; line-height: 1; }
+  .order-chip .rm:hover { opacity: 1; color: var(--red); }
+
+  .output-sep-row { display: flex; gap: 10px; align-items: flex-end; margin-bottom: 14px; }
+  .output-sep-row > div:first-child { flex: 1; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: none; cursor: pointer; transition: all .2s; white-space: nowrap;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+  }
+  .btn-primary:hover { opacity: .88; transform: translateY(-1px); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-secondary {
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
+  }
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--text); }
+  .btn-green {
+    background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.3); color: var(--green);
+  }
+  .btn-green:hover { background: rgba(34,197,94,.25); }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+  .actions { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+
+  .result-area {
+    position: relative;
+  }
+  .result-area textarea {
+    min-height: 220px;
+    background: #0a0a0e;
+  }
+  .copy-overlay {
+    position: absolute; top: 10px; right: 10px;
+  }
+
+  .stats-row {
+    display: flex; gap: 12px; margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .stat-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .stat-chip strong { color: var(--text); }
+
+  .toast {
+    position: fixed; bottom: 28px; right: 28px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 20px;
+    font-size: 13px; color: var(--text);
+    box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    transform: translateY(20px); opacity: 0;
+    transition: all .3s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.success { border-color: rgba(34,197,94,.4); color: var(--green); }
+  .toast.error { border-color: rgba(239,68,68,.4); color: var(--red); }
+
+  .full-card { grid-column: 1 / -1; }
+
+  .preview-table-wrap {
+    overflow-x: auto; margin-bottom: 14px; max-height: 200px; overflow-y: auto;
+    border-radius: 8px; border: 1px solid var(--border);
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: var(--surface); padding: 8px 12px;
+    text-align: left; color: var(--muted); font-weight: 600;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  tbody td {
+    padding: 7px 12px; border-bottom: 1px solid rgba(42,42,62,.5);
+    font-family: 'Courier New', monospace; word-break: break-all;
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(124,58,237,.05); }
+  .highlight-col td.hl { color: var(--accent2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚗️</div>
+  <h1>Token Extractor</h1>
+  <nav>
+    <a href="/">Panel</a>
+    <a href="/admin">Admin</a>
+  </nav>
+</header>
+
+<div class="container">
+  <h2>Data Extractor</h2>
+  <p class="subtitle">Paste your data, define the format, pick columns — get clean output instantly. Nothing is saved.</p>
+
+  <div class="grid">
+
+    <!-- LEFT: Input -->
+    <div class="card">
+      <div class="card-title"><span>📥</span> Input Data</div>
+
+      <div class="format-hint">
+        Each line = one record. Columns are separated by a delimiter (e.g. <strong>:</strong>).<br>
+        Example: <strong>email:password:token:user_id:phone</strong>
+      </div>
+
+      <label>Paste your data (one entry per line)</label>
+      <textarea id="inputData" rows="10" placeholder="user@email.com:password123:MTA0...token...:123456789:+1234567890&#10;user2@email.com:pass456:NDc...token...:987654321:+0987654321"></textarea>
+
+      <div class="sep-row" style="margin-top:14px;">
+        <div>
+          <label>Column delimiter</label>
+          <input type="text" id="delimiter" value=":" maxlength="5" style="width:80px;">
+        </div>
+        <div style="flex:1;">
+          <label>Format string <span style="color:var(--muted);font-weight:400;">(name each column, separated by same delimiter)</span></label>
+          <input type="text" id="formatStr" placeholder="email:password:token:user_id:phone">
+        </div>
+        <div>
+          <button class="btn btn-secondary btn-sm" onclick="parseFormat()">Parse ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Column selector -->
+    <div class="card">
+      <div class="card-title"><span>🎯</span> Select Columns to Extract</div>
+
+      <div id="noColsHint" style="color:var(--muted);font-size:13px;margin-bottom:16px;">
+        Enter a format string above and click <strong>Parse ▶</strong> to see columns here.
+      </div>
+
+      <div id="colPickerWrap" style="display:none;">
+        <label style="margin-bottom:8px;">Click columns to select (order matters):</label>
+        <div class="columns-wrap" id="columnTags"></div>
+
+        <div class="col-order">Selected order (drag to reorder, click × to remove):</div>
+        <div class="selected-order" id="selectedOrder"></div>
+
+        <div class="output-sep-row">
+          <div>
+            <label>Output delimiter (between extracted columns)</label>
+            <input type="text" id="outputDelimiter" value=":" maxlength="10">
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" onclick="doExtract()">⚡ Extract</button>
+          <button class="btn btn-secondary btn-sm" onclick="clearAll()">Clear</button>
+          <button class="btn btn-secondary btn-sm" onclick="selectAll()">Select All</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- FULL: Preview -->
+    <div class="card full-card" id="previewCard" style="display:none;">
+      <div class="card-title"><span>👁️</span> Data Preview <span id="previewCount" style="font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0;"></span></div>
+      <div class="preview-table-wrap">
+        <table id="previewTable">
+          <thead id="previewHead"></thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FULL: Output -->
+    <div class="card full-card" id="outputCard" style="display:none;">
+      <div class="card-title"><span>📤</span> Extracted Output</div>
+
+      <div class="stats-row" id="statsRow"></div>
+
+      <div class="result-area">
+        <textarea id="outputData" rows="12" readonly placeholder="Extracted data will appear here..."></textarea>
+        <div class="copy-overlay">
+          <button class="btn btn-green btn-sm" onclick="copyOutput()">📋 Copy All</button>
+        </div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="downloadOutput()">⬇️ Download .txt</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearOutput()">🗑️ Clear Output</button>
+        <span style="font-size:12px;color:var(--muted);margin-left:auto;align-self:center;">No data is stored or sent to any server.</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let parsedColumns = [];
+  let selectedCols = [];
+
+  function showToast(msg, type = 'success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => { t.className = 'toast'; }, 2500);
+  }
+
+  function getDelimiter() {
+    const raw = document.getElementById('delimiter').value;
+    return raw === '\\t' ? '\t' : (raw || ':');
+  }
+
+  function parseFormat() {
+    const fmt = document.getElementById('formatStr').value.trim();
+    const delim = getDelimiter();
+    if (!fmt) { showToast('Enter a format string first', 'error'); return; }
+
+    parsedColumns = fmt.split(delim).map(c => c.trim()).filter(Boolean);
+    if (parsedColumns.length === 0) { showToast('No columns found — check delimiter', 'error'); return; }
+
+    selectedCols = [];
+    renderColumnTags();
+    renderSelectedOrder();
+    document.getElementById('noColsHint').style.display = 'none';
+    document.getElementById('colPickerWrap').style.display = 'block';
+    renderPreview();
+    showToast(`Parsed ${parsedColumns.length} column(s)`, 'success');
+  }
+
+  function renderColumnTags() {
+    const wrap = document.getElementById('columnTags');
+    wrap.innerHTML = '';
+    parsedColumns.forEach((col, i) => {
+      const tag = document.createElement('div');
+      tag.className = 'col-tag' + (selectedCols.includes(i) ? ' selected' : '');
+      tag.innerHTML = `<span class="idx">${i+1}</span>${col}`;
+      tag.onclick = () => toggleCol(i);
+      tag.dataset.idx = i;
+      wrap.appendChild(tag);
+    });
+  }
+
+  function toggleCol(idx) {
+    const pos = selectedCols.indexOf(idx);
+    if (pos === -1) {
+      selectedCols.push(idx);
+    } else {
+      selectedCols.splice(pos, 1);
+    }
+    renderColumnTags();
+    renderSelectedOrder();
+  }
+
+  function renderSelectedOrder() {
+    const wrap = document.getElementById('selectedOrder');
+    wrap.innerHTML = '';
+    if (selectedCols.length === 0) {
+      wrap.innerHTML = '<span style="color:var(--muted);font-size:12px;">None selected</span>';
+      return;
+    }
+    selectedCols.forEach((colIdx, orderPos) => {
+      const chip = document.createElement('div');
+      chip.className = 'order-chip';
+      chip.draggable = true;
+      chip.dataset.pos = orderPos;
+      chip.innerHTML = `${parsedColumns[colIdx]}<span class="rm" onclick="removeFromOrder(${orderPos})">×</span>`;
+
+      chip.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', orderPos); });
+      chip.addEventListener('dragover', e => e.preventDefault());
+      chip.addEventListener('drop', e => {
+        e.preventDefault();
+        const from = parseInt(e.dataTransfer.getData('text/plain'));
+        const to = orderPos;
+        if (from === to) return;
+        const moved = selectedCols.splice(from, 1)[0];
+        selectedCols.splice(to, 0, moved);
+        renderColumnTags();
+        renderSelectedOrder();
+      });
+      wrap.appendChild(chip);
+    });
+  }
+
+  function removeFromOrder(pos) {
+    selectedCols.splice(pos, 1);
+    renderColumnTags();
+    renderSelectedOrder();
+  }
+
+  function selectAll() {
+    selectedCols = parsedColumns.map((_, i) => i);
+    renderColumnTags();
+    renderSelectedOrder();
+  }
+
+  function getLines() {
+    const raw = document.getElementById('inputData').value;
+    return raw.split('\n').map(l => l.trim()).filter(Boolean);
+  }
+
+  function renderPreview() {
+    const lines = getLines();
+    if (lines.length === 0 || parsedColumns.length === 0) {
+      document.getElementById('previewCard').style.display = 'none';
+      return;
+    }
+    const delim = getDelimiter();
+    document.getElementById('previewCard').style.display = 'block';
+    document.getElementById('previewCount').textContent = `— ${lines.length} line(s)`;
+
+    const head = document.getElementById('previewHead');
+    head.innerHTML = '<tr>' + ['#', ...parsedColumns].map(c => `<th>${c}</th>`).join('') + '</tr>';
+
+    const body = document.getElementById('previewBody');
+    const show = lines.slice(0, 50);
+    body.innerHTML = show.map((line, li) => {
+      const parts = line.split(delim);
+      const cells = parsedColumns.map((_, ci) => {
+        const val = parts[ci] !== undefined ? parts[ci] : '<span style="color:var(--red)">—</span>';
+        const isSelected = selectedCols.includes(ci);
+        return `<td class="${isSelected ? 'hl' : ''}">${val}</td>`;
+      });
+      return `<tr><td style="color:var(--muted)">${li+1}</td>${cells.join('')}</tr>`;
+    }).join('');
+  }
+
+  function doExtract() {
+    if (selectedCols.length === 0) { showToast('Select at least one column', 'error'); return; }
+    const lines = getLines();
+    if (lines.length === 0) { showToast('No input data', 'error'); return; }
+
+    const delim = getDelimiter();
+    const outDelim = document.getElementById('outputDelimiter').value;
+
+    let ok = 0, skipped = 0;
+    const results = [];
+
+    lines.forEach(line => {
+      const parts = line.split(delim);
+      const extracted = selectedCols.map(ci => parts[ci] !== undefined ? parts[ci] : '');
+      if (extracted.some(v => v === '')) skipped++;
+      else ok++;
+      results.push(extracted.join(outDelim));
+    });
+
+    const output = results.join('\n');
+    document.getElementById('outputData').value = output;
+    document.getElementById('outputCard').style.display = 'block';
+
+    const statsRow = document.getElementById('statsRow');
+    statsRow.innerHTML = `
+      <div class="stat-chip">Total lines: <strong>${lines.length}</strong></div>
+      <div class="stat-chip">Extracted: <strong>${results.length}</strong></div>
+      <div class="stat-chip">Complete rows: <strong style="color:var(--green)">${ok}</strong></div>
+      ${skipped > 0 ? `<div class="stat-chip">Rows with missing cols: <strong style="color:var(--yellow)">${skipped}</strong></div>` : ''}
+      <div class="stat-chip">Columns: <strong>${selectedCols.map(i => parsedColumns[i]).join(', ')}</strong></div>
+    `;
+
+    renderPreview();
+    document.getElementById('outputCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    showToast(`Extracted ${results.length} line(s) ✓`);
+  }
+
+  function copyOutput() {
+    const val = document.getElementById('outputData').value;
+    if (!val) { showToast('Nothing to copy', 'error'); return; }
+    navigator.clipboard.writeText(val).then(() => showToast('Copied to clipboard ✓')).catch(() => {
+      document.getElementById('outputData').select();
+      document.execCommand('copy');
+      showToast('Copied ✓');
+    });
+  }
+
+  function downloadOutput() {
+    const val = document.getElementById('outputData').value;
+    if (!val) { showToast('Nothing to download', 'error'); return; }
+    const blob = new Blob([val], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'extracted.txt';
+    a.click();
+    showToast('Downloaded ✓');
+  }
+
+  function clearOutput() {
+    document.getElementById('outputData').value = '';
+    document.getElementById('outputCard').style.display = 'none';
+  }
+
+  function clearAll() {
+    document.getElementById('inputData').value = '';
+    document.getElementById('formatStr').value = '';
+    document.getElementById('outputData').value = '';
+    document.getElementById('outputCard').style.display = 'none';
+    document.getElementById('previewCard').style.display = 'none';
+    document.getElementById('columnTags').innerHTML = '';
+    document.getElementById('selectedOrder').innerHTML = '';
+    document.getElementById('noColsHint').style.display = 'block';
+    document.getElementById('colPickerWrap').style.display = 'none';
+    parsedColumns = [];
+    selectedCols = [];
+  }
+
+  document.getElementById('inputData').addEventListener('input', () => {
+    if (parsedColumns.length > 0) renderPreview();
+  });
+  document.getElementById('delimiter').addEventListener('input', () => {
+    if (parsedColumns.length > 0) renderPreview();
+  });
+</script>
+</body>
+</html>
